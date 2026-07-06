@@ -163,9 +163,9 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
       <button class="btn-p" onclick="refreshRemote()">🔄 最新の過去問に更新</button>
       <div class="sp12"></div>
       <button class="btn-g" onclick="document.getElementById('import-file').click()">📥 ファイルから読み込む</button>
-      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(this)"/>
+      <input type="file" id="import-file" accept=".zip,.json" style="display:none" onchange="importData(this)"/>
       <div class="sp24"></div>
-      <div class="hint">「最新の過去問に更新」は、Web公開されたデータを取りに行きます。<br>管理者から <b>data.json</b> を直接もらった場合は「ファイルから読み込む」で取り込めます。あなたが付けた◯×△や点数は消えません。</div>
+      <div class="hint">管理者から <b>kakomon_data.zip</b>（または data.json）をLINE等でもらったら「ファイルから読み込む」で取り込めます。あなたが付けた◯×△や点数は消えません。</div>
     </div>
 
   </div>
@@ -455,19 +455,41 @@ async function refreshRemote(){
   if(ok){renderList();renderSettings();toast('最新の過去問に更新しました');}
   else{toast('Web公開データが見つかりませんでした');renderSettings();}
 }
+function loadJSZip(){
+  return window.JSZip?Promise.resolve():new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    s.onload=res;s.onerror=()=>rej(new Error('JSZip load failed'));
+    document.head.appendChild(s);
+  });
+}
+async function parseImportFile(file){
+  if(file.name.toLowerCase().endsWith('.zip')){
+    await loadJSZip();
+    const zip=await JSZip.loadAsync(file);
+    const dj=zip.file('data.json');
+    if(!dj)throw new Error('data.json not found');
+    const meta=JSON.parse(await dj.async('string'));
+    for(const r of meta.records){
+      const pf=zip.file(`pdfs/${r.id}.pdf`);
+      if(pf)r.pdfData='data:application/pdf;base64,'+await pf.async('base64');
+    }
+    return meta;
+  }
+  return JSON.parse(await file.text());
+}
 function importData(input){
   const f=input.files[0];if(!f)return;
-  const rd=new FileReader();
-  rd.onload=async ev=>{
+  (async()=>{
     try{
-      const p=JSON.parse(ev.target.result);
+      const p=await parseImportFile(f);
       if(!Array.isArray(p.subjects)||!Array.isArray(p.records))throw 0;
       if(!confirm(`過去問データを取り込みます。\n（科目 ${p.subjects.length}件・記録 ${p.records.length}件）\n※あなたが付けた◯×△・点数は消えません`)){input.value='';return;}
       await applyMaster(p,'file');
       renderList();renderSettings();toast('読み込みました');
     }catch(_){toast('読み込みに失敗しました');}
-  };
-  rd.readAsText(f);input.value='';
+  })();
+  input.value='';
 }
 function renderSettings(){
   const map={seed:['#A0AFBF','サンプルデータ（未共有）'],local:['#5AC8C8','取込済みデータ'],remote:['#4ECBA0','Web公開データ（最新）'],file:['#6EB5E8','ファイルから読込済み']};
