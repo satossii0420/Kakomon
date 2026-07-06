@@ -136,7 +136,17 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 .btn-g{display:block;width:calc(100% - 32px);margin:0 16px;padding:15px;border-radius:var(--rsm);border:1.5px solid var(--border);background:var(--card);color:var(--ink2);font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;text-align:center;-webkit-appearance:none;min-height:52px}
 .btn-g:active{opacity:.65}
 .hint{margin:0 16px 16px;padding:14px 16px;background:rgba(110,181,232,.06);border:1px solid rgba(110,181,232,.16);border-radius:var(--rsm);font-size:13px;color:var(--ink2);line-height:1.7}
-.src-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}</style>
+.src-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.filterbar{display:flex;flex-direction:column;gap:8px;padding:0 16px 14px}
+.searchbox{display:flex;align-items:center;gap:8px;background:var(--card);border-radius:12px;padding:9px 12px;box-shadow:var(--sh)}
+.searchbox svg{width:16px;height:16px;stroke:var(--ink3);fill:none;stroke-width:2;stroke-linecap:round;flex-shrink:0}
+.searchbox input{flex:1;border:none;outline:none;background:transparent;font-family:inherit;font-size:14px;color:var(--ink1);min-width:0}
+.searchbox .clr{border:none;background:none;color:var(--ink3);font-size:18px;line-height:1;cursor:pointer;padding:0 2px;display:none}
+.markfilter{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.markfilter::-webkit-scrollbar{display:none}
+.mf{flex-shrink:0;border:none;background:var(--card);color:var(--ink2);font-family:inherit;font-size:12px;font-weight:700;padding:7px 12px;border-radius:20px;box-shadow:var(--sh);cursor:pointer;white-space:nowrap;min-height:34px}
+.mf.active{background:var(--ink1);color:#fff}
+.mf.review.active{background:var(--red)}</style>
 </head>
 <body>
 <div id="app">
@@ -148,6 +158,19 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
         <div style="display:flex;gap:8px;align-items:center">
           <select id="f-subj" onchange="renderList()" style="border:none;background:rgba(255,255,255,.88);font-family:inherit;font-size:12px;font-weight:700;color:var(--blue);outline:none;padding:7px 12px;border-radius:20px;box-shadow:0 1px 5px rgba(0,0,0,.08);cursor:pointer;-webkit-appearance:none;min-height:36px"></select>
           <button class="icon-btn" onclick="go('settings')" aria-label="設定"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+        </div>
+      </div>
+      <div class="filterbar">
+        <div class="searchbox">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="f-search" placeholder="検索（科目・年度・メモ）" oninput="renderList()" autocomplete="off"/>
+          <button class="clr" id="f-search-clr" onclick="clearSearch()" aria-label="クリア">×</button>
+        </div>
+        <div class="markfilter" id="markfilter">
+          <button class="mf active" data-mf="all" onclick="setMarkFilter('all')">すべて</button>
+          <button class="mf review" data-mf="review" onclick="setMarkFilter('review')">要復習 ✕△</button>
+          <button class="mf" data-mf="o" onclick="setMarkFilter('o')">〇</button>
+          <button class="mf" data-mf="none" onclick="setMarkFilter('none')">未マーク</button>
         </div>
       </div>
       <div id="list-hero"></div><div id="list-chart"></div><div id="list-area"></div>
@@ -306,19 +329,43 @@ function heroHTML(){
   return `<div class="hero"><div class="hero-lbl">登録済み</div><div class="hero-row"><div class="ring"><svg viewBox="0 0 60 60"><circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="${sw}"/><circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="rgba(255,255,255,.88)" stroke-width="${sw}" stroke-dasharray="${circ}" stroke-dashoffset="0" stroke-linecap="round"/></svg><div class="ring-num"><div class="ring-big">${total}</div><div class="ring-sm">問</div></div></div><div><div class="hero-sub">科目 ${M.subjects.length}個<br>${years}年度分</div></div></div><div class="chips">${chips}</div></div>`;
 }
 
+/* ── 検索・復習フィルタ ── */
+let markFilter='all';
+function setMarkFilter(v){
+  markFilter=v;
+  document.querySelectorAll('#markfilter .mf').forEach(b=>b.classList.toggle('active',b.dataset.mf===v));
+  renderList();
+}
+function clearSearch(){sv('f-search','');renderList();}
+function matchMark(r){
+  const m=getMark(r.id);
+  return markFilter==='all'
+    ||(markFilter==='review'&&(m==='x'||m==='t'))
+    ||(markFilter==='o'&&m==='o')
+    ||(markFilter==='none'&&!m);
+}
+function matchQuery(r,q){
+  if(!q)return true;
+  return [r.subject,r.year,r.term,r.type,r.memo].some(s=>String(s??'').toLowerCase().includes(q));
+}
+
 /* ── renderList ── */
 function renderList(){
   el('list-date').textContent=todayStr();
   const fSubj=gv('f-subj');
-  if(fSubj){
-    el('list-hero').innerHTML='';
-    renderScoreChart(fSubj);
-  }else{
-    el('list-chart').innerHTML='';
-    el('list-hero').innerHTML=heroHTML();
+  const q=(el('f-search')?.value||'').trim().toLowerCase();
+  const clr=el('f-search-clr');if(clr)clr.style.display=q?'block':'none';
+  const filtering=!!q||markFilter!=='all';
+  el('list-hero').innerHTML='';el('list-chart').innerHTML='';
+  if(!filtering){
+    if(fSubj)renderScoreChart(fSubj);
+    else el('list-hero').innerHTML=heroHTML();
   }
-  const recs=M.records.filter(r=>!fSubj||r.subject===fSubj).sort((a,b)=>b.year-a.year||a.subject.localeCompare(b.subject));
-  if(!recs.length){el('list-area').innerHTML=`<div class="empty"><div class="empty-icon">📭</div><div class="empty-title">記録がありません</div></div>`;return;}
+  const recs=M.records.filter(r=>(!fSubj||r.subject===fSubj)&&matchMark(r)&&matchQuery(r,q)).sort((a,b)=>b.year-a.year||a.subject.localeCompare(b.subject));
+  if(!recs.length){
+    const msg=filtering?'該当する過去問がありません':'記録がありません';
+    el('list-area').innerHTML=`<div class="empty"><div class="empty-icon">${filtering?'🔍':'📭'}</div><div class="empty-title">${msg}</div></div>`;return;
+  }
   const order={};M.subjects.forEach((s,i)=>order[s.name]=i);
   const grouped={};recs.forEach(r=>{(grouped[r.subject]??=[]).push(r);});
   el('list-area').innerHTML=Object.keys(grouped).sort((a,b)=>(order[a]??99)-(order[b]??99)).map(subj=>{
