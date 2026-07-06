@@ -146,7 +146,10 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 .markfilter::-webkit-scrollbar{display:none}
 .mf{flex-shrink:0;border:none;background:var(--card);color:var(--ink2);font-family:inherit;font-size:12px;font-weight:700;padding:7px 12px;border-radius:20px;box-shadow:var(--sh);cursor:pointer;white-space:nowrap;min-height:34px}
 .mf.active{background:var(--ink1);color:#fff}
-.mf.review.active{background:var(--red)}</style>
+.mf.review.active{background:var(--red)}
+.att-item{margin-bottom:16px}
+.att-cap{font-size:12px;font-weight:700;color:var(--ink2);padding:0 0 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.att-img{width:100%;height:auto;border-radius:var(--rsm);box-shadow:var(--sh);display:block;background:#fff}</style>
 </head>
 <body>
 <div id="app">
@@ -237,12 +240,26 @@ function openIdb(){
 }
 const idbRun=(mode,fn)=>openIdb().then(db=>new Promise((res,rej)=>{const tx=db.transaction(IDB.store,mode);fn(tx.objectStore(IDB.store),res,rej);tx.onerror=()=>rej(tx.error);}));
 const idbAll=()=>idbRun('readonly',(s,res,rej)=>{const r=s.getAll();r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});
-const idbPut=(id,n,d)=>idbRun('readwrite',(s,res)=>{s.put({id,pdfName:n,pdfData:d});s.transaction.oncomplete=res;});
+const idbPut=(id,atts)=>idbRun('readwrite',(s,res)=>{s.put({id,attachments:atts});s.transaction.oncomplete=res;});
 const idbClear=()=>idbRun('readwrite',(s,res)=>{s.clear();s.transaction.oncomplete=res;});
 
 /* ── ストレージ ── */
+/* 添付を正規化: record.attachments = [{name,type,mime,(data)}] */
+function normalizeRec(x){
+  if(!Array.isArray(x.attachments)){
+    x.attachments=(x.pdfName||x.pdfData)?[{name:x.pdfName||'PDF',type:'pdf',mime:'application/pdf'}]:[];
+  }
+  delete x.pdfData;delete x.pdfName;
+}
+/* パース直後の添付を data 付きで取り出す（zip/旧json両対応） */
+function attsWithData(r){
+  if(Array.isArray(r.attachments))return r.attachments.filter(a=>a&&a.data);
+  if(r.pdfData)return [{name:r.pdfName||'PDF',type:'pdf',mime:'application/pdf',data:r.pdfData}];
+  return [];
+}
+const attCount=r=>(r.attachments||[]).length;
 function saveMaster(){
-  const slim={...M,records:M.records.map(r=>({...r,pdfData:null}))};
+  const slim={...M,records:M.records.map(r=>({...r,pdfData:undefined,pdfName:undefined,attachments:(r.attachments||[]).map(a=>({name:a.name,type:a.type,mime:a.mime}))}))};
   try{localStorage.setItem(SK_MASTER,JSON.stringify(slim));}catch(_){}
 }
 function saveScores(){try{localStorage.setItem(SK_SCORES,JSON.stringify(SCORES));}catch(_){}}
@@ -252,7 +269,7 @@ function loadAll(){
     if(raw){
       const p=JSON.parse(raw);
       if(Array.isArray(p.subjects)&&Array.isArray(p.records)){
-        p.records.forEach(x=>{if(!x.type)x.type='期末';x.pdfData=null;});
+        p.records.forEach(x=>{if(!x.type)x.type='期末';normalizeRec(x);});
         p.nextId=Math.max(p.nextId??0,...p.records.map(x=>x.id+1));
         M=p;DATA_SRC='local';
       }
@@ -262,8 +279,11 @@ function loadAll(){
   try{const raw=localStorage.getItem(SK_MARKS);if(raw)MARKS=JSON.parse(raw);}catch(_){}
 }
 async function loadPdfs(){
-  try{(await idbAll()).forEach(e=>{const r=M.records.find(x=>x.id===e.id);if(r){r.pdfName=e.pdfName;r.pdfData=e.pdfData;}});}
-  catch(_){}
+  try{(await idbAll()).forEach(e=>{
+    const r=M.records.find(x=>x.id===e.id);if(!r)return;
+    r.attachments=Array.isArray(e.attachments)?e.attachments
+      :(e.pdfData?[{name:e.pdfName||'PDF',type:'pdf',mime:'application/pdf',data:e.pdfData}]:[]);
+  });}catch(_){}
 }
 
 /* ── ユーティリティ ── */
@@ -293,13 +313,24 @@ function toast(msg){
   t.textContent=msg;t.classList.add('show');
   toastTimer=setTimeout(()=>t.classList.remove('show'),2000);
 }
-function pdfBlobUrl(data){
-  if(_blobUrl){URL.revokeObjectURL(_blobUrl);_blobUrl=null;}
+let _blobs=[];
+function revokeBlobs(){_blobs.forEach(u=>URL.revokeObjectURL(u));_blobs=[];}
+function blobUrl(dataUrl,mime){
   try{
-    const bin=atob(data.split(',')[1]),arr=new Uint8Array(bin.length);
+    const bin=atob(dataUrl.split(',')[1]),arr=new Uint8Array(bin.length);
     for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
-    return(_blobUrl=URL.createObjectURL(new Blob([arr],{type:'application/pdf'})));
-  }catch(_){return data;}
+    const u=URL.createObjectURL(new Blob([arr],{type:mime||'application/pdf'}));
+    _blobs.push(u);return u;
+  }catch(_){return dataUrl;}
+}
+/* 1記録の全添付をビューア用HTMLに（PDF=iframe / 画像=img） */
+function attViewHTML(r){
+  const atts=(r.attachments||[]).filter(a=>a.data);
+  if(!atts.length)return '<div class="chart-empty">添付なし</div>';
+  return atts.map(a=>a.type==='image'
+    ?`<div class="att-item"><div class="att-cap">🖼️ ${esc(a.name)}</div><img class="att-img" src="${a.data}" alt="${esc(a.name)}"/></div>`
+    :`<div class="att-item"><div class="att-cap">📄 ${esc(a.name)}</div><div class="pdf-wrap" style="margin:0"><iframe src="${blobUrl(a.data,a.mime)}" title="${esc(a.name)}"></iframe></div></div>`
+  ).join('');
 }
 function fillSubjFilter(){
   const prev=gv('f-subj');
@@ -418,23 +449,24 @@ function renderStats(){
 
 /* ── PDF viewer ── */
 function renderPdf(){
-  const withPdf=M.records.filter(r=>r.pdfData);
-  if(!withPdf.length){el('pdf-area').innerHTML=`<div class="empty"><div class="empty-icon">📂</div><div class="empty-title">PDFがありません</div></div>`;el('pdf-viewer').innerHTML='';return;}
+  const withAtt=M.records.filter(r=>attCount(r));
+  if(!withAtt.length){el('pdf-area').innerHTML=`<div class="empty"><div class="empty-icon">📂</div><div class="empty-title">添付ファイルがありません</div></div>`;el('pdf-viewer').innerHTML='';revokeBlobs();return;}
   // 未選択状態をリセット（タブを開き直したときは選択解除）
-  if(!withPdf.find(r=>r.id===activePdf))activePdf=null;
+  if(!withAtt.find(r=>r.id===activePdf))activePdf=null;
   const order={};M.subjects.forEach((s,i)=>order[s.name]=i);
-  const grouped={};withPdf.forEach(r=>{(grouped[r.subject]??=[]).push(r);});
+  const grouped={};withAtt.forEach(r=>{(grouped[r.subject]??=[]).push(r);});
   Object.values(grouped).forEach(a=>a.sort((a,b)=>b.year-a.year));
   el('pdf-area').innerHTML=Object.keys(grouped).sort((a,b)=>(order[a]??99)-(order[b]??99)).map(subj=>{
     const c=sColor(subj),bg=sBg(c);
-    return `<div class="sec"><div class="sec-lbl">${esc(subj)}</div><div class="clist">${grouped[subj].map(r=>`<div class="crow" onclick="activePdf=${r.id};renderPdfViewer()" style="${r.id===activePdf?'background:rgba(110,181,232,.07)':''}"><div class="ci" style="background:${bg};color:${c}">📄</div><div class="cb"><div class="ct">${tagStr(r)}</div>${r.memo?`<div class="cs">${esc(r.memo)}</div>`:''}</div><svg class="chev" viewBox="0 0 8 13"><path d="M1 1l6 5.5L1 12"/></svg></div>`).join('')}</div></div>`;
+    return `<div class="sec"><div class="sec-lbl">${esc(subj)}</div><div class="clist">${grouped[subj].map(r=>`<div class="crow" onclick="activePdf=${r.id};renderPdfViewer()" style="${r.id===activePdf?'background:rgba(110,181,232,.07)':''}"><div class="ci" style="background:${bg};color:${c}">📄</div><div class="cb"><div class="ct">${tagStr(r)}</div><div class="cs">添付 ${attCount(r)}件${r.memo?' · '+esc(r.memo):''}</div></div><svg class="chev" viewBox="0 0 8 13"><path d="M1 1l6 5.5L1 12"/></svg></div>`).join('')}</div></div>`;
   }).join('');
   renderPdfViewer();
 }
 function renderPdfViewer(){
+  revokeBlobs();
   const rec=M.records.find(r=>r.id===activePdf);
-  if(!rec?.pdfData){el('pdf-viewer').innerHTML='';return;}
-  el('pdf-viewer').innerHTML=`<div class="pdf-wrap"><iframe src="${pdfBlobUrl(rec.pdfData)}" title="${esc(rec.subject)}"></iframe></div>`;
+  if(!rec||!attCount(rec)){el('pdf-viewer').innerHTML='';return;}
+  el('pdf-viewer').innerHTML=`<div style="padding:0 16px">${attViewHTML(rec)}</div>`;
 }
 
 /* ── User: rowHTML ── */
@@ -447,44 +479,51 @@ function markBtns(id){
   </div>`;
 }
 function rowHTML(r,c,bg){
-  return `<div class="crow"><div class="ci" style="background:${bg};color:${c}">📄</div>${markBtns(r.id)}<div class="cb"><div class="ct">${tagStr(r)}</div>${r.memo?`<div class="cs">${esc(r.memo)}</div>`:''}</div><div class="cr">${r.pdfData?`<button class="pdf-btn" onclick="openPdfModal(${r.id},event)">📖 PDF</button>`:''}<input class="score-inp" type="number" min="0" max="999" placeholder="点数" value="${getScore(r.id)??''}" onchange="saveScore(${r.id},this.value)" onclick="event.stopPropagation()"/></div></div>`;
+  const n=attCount(r);
+  return `<div class="crow"><div class="ci" style="background:${bg};color:${c}">📄</div>${markBtns(r.id)}<div class="cb"><div class="ct">${tagStr(r)}</div>${r.memo?`<div class="cs">${esc(r.memo)}</div>`:''}</div><div class="cr">${n?`<button class="pdf-btn" onclick="openPdfModal(${r.id},event)">📎 ${n}</button>`:''}<input class="score-inp" type="number" min="0" max="999" placeholder="点数" value="${getScore(r.id)??''}" onchange="saveScore(${r.id},this.value)" onclick="event.stopPropagation()"/></div></div>`;
 }
 
-/* ── User: PDFモーダル ── */
-let _modalBlobUrl=null;
+/* ── User: 添付モーダル（1記録の複数添付を切替表示） ── */
+let _modalBlobs=[];
+function revokeModalBlobs(){_modalBlobs.forEach(u=>URL.revokeObjectURL(u));_modalBlobs=[];}
+function modalBlobUrl(dataUrl,mime){
+  const bin=atob(dataUrl.split(',')[1]),arr=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
+  const u=URL.createObjectURL(new Blob([arr],{type:mime||'application/pdf'}));
+  _modalBlobs.push(u);return u;
+}
 function openPdfModal(id,e){
   e?.stopPropagation();
-  const r=M.records.find(x=>x.id===id);if(!r?.pdfData)return;
-  const same=M.records.filter(x=>x.subject===r.subject&&x.pdfData).sort((a,b)=>b.year-a.year);
-  const c=sColor(r.subject),bg=sBg(c);
-  el('pdf-modal-title').textContent=r.subject;
-  el('pdf-modal-list').innerHTML=`<div style="padding:0 0 8px">${same.map(x=>`<div class="crow" onclick="showModalPdf(${x.id})" id="pmr-${x.id}" style="${x.id===id?'background:rgba(110,181,232,.07)':''}"><div class="ci" style="background:${bg};color:${c};font-size:15px">📄</div><div class="cb"><div class="ct">${tagStr(x)}</div>${x.memo?`<div class="cs">${esc(x.memo)}</div>`:''}</div><svg class="chev" viewBox="0 0 8 13"><path d="M1 1l6 5.5L1 12"/></svg></div>`).join('')}</div>`;
-  showModalPdf(id);
+  const r=M.records.find(x=>x.id===id);if(!r||!attCount(r))return;
+  const c=sColor(r.subject),bg=sBg(c),atts=r.attachments;
+  el('pdf-modal-title').textContent=`${r.subject}｜${tagStr(r)}`;
+  el('pdf-modal-list').innerHTML=`<div style="padding:0 0 8px">${atts.map((a,i)=>`<div class="crow" onclick="showModalAtt(${id},${i})" id="pma-${i}" style="${i===0?'background:rgba(110,181,232,.07)':''}"><div class="ci" style="background:${bg};color:${c};font-size:15px">${a.type==='image'?'🖼️':'📄'}</div><div class="cb"><div class="ct">${esc(a.name)}</div></div><svg class="chev" viewBox="0 0 8 13"><path d="M1 1l6 5.5L1 12"/></svg></div>`).join('')}</div>`;
+  showModalAtt(id,0);
   el('pdf-modal').classList.remove('hidden');
 }
-function showModalPdf(id){
-  el('pdf-modal-list').querySelectorAll('.crow').forEach(row=>{row.style.background=row.id===`pmr-${id}`?'rgba(110,181,232,.07)':'';});
-  const r=M.records.find(x=>x.id===id);
-  if(!r?.pdfData){el('pdf-modal-viewer').innerHTML='';return;}
-  if(_modalBlobUrl){URL.revokeObjectURL(_modalBlobUrl);_modalBlobUrl=null;}
-  const bin=atob(r.pdfData.split(',')[1]),arr=new Uint8Array(bin.length);
-  for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
-  _modalBlobUrl=URL.createObjectURL(new Blob([arr],{type:'application/pdf'}));
-  el('pdf-modal-viewer').innerHTML=`<div style="padding:0 16px 16px"><div class="pdf-wrap" style="margin:0"><iframe src="${_modalBlobUrl}" title="${esc(r.subject)}"></iframe></div></div>`;
+function showModalAtt(id,idx){
+  el('pdf-modal-list').querySelectorAll('.crow').forEach(row=>{row.style.background=row.id===`pma-${idx}`?'rgba(110,181,232,.07)':'';});
+  const a=M.records.find(x=>x.id===id)?.attachments?.[idx];
+  revokeModalBlobs();
+  if(!a||!a.data){el('pdf-modal-viewer').innerHTML='';return;}
+  const inner=a.type==='image'
+    ?`<img class="att-img" src="${a.data}" alt="${esc(a.name)}"/>`
+    :`<div class="pdf-wrap" style="margin:0"><iframe src="${modalBlobUrl(a.data,a.mime)}" title="${esc(a.name)}"></iframe></div>`;
+  el('pdf-modal-viewer').innerHTML=`<div style="padding:0 16px 16px">${inner}</div>`;
 }
-function closePdfModal(){
-  el('pdf-modal').classList.add('hidden');
-  if(_modalBlobUrl){URL.revokeObjectURL(_modalBlobUrl);_modalBlobUrl=null;}
-}
+function closePdfModal(){el('pdf-modal').classList.add('hidden');revokeModalBlobs();}
 
 /* ── User: データ取り込み ── */
 async function applyMaster(p,src){
   if(!Array.isArray(p.subjects)||!Array.isArray(p.records))throw new Error('bad');
   await idbClear();
-  for(const r of p.records){if(r.pdfData)await idbPut(r.id,r.pdfName||null,r.pdfData);}
-  p.records.forEach(x=>{if(!x.type)x.type='期末';});
+  for(const r of p.records){
+    const atts=attsWithData(r);
+    if(atts.length)await idbPut(r.id,atts);
+  }
+  p.records.forEach(x=>{if(!x.type)x.type='期末';normalizeRec(x);});
   p.nextId=Math.max(p.nextId??0,...p.records.map(x=>x.id+1),1);
-  M={...p,records:p.records.map(r=>({...r,pdfData:null}))};
+  M=p;
   DATA_SRC=src;saveMaster();fillSubjFilter();await loadPdfs();
 }
 async function loadRemote(){
@@ -518,8 +557,15 @@ async function parseImportFile(file){
     if(!dj)throw new Error('data.json not found');
     const meta=JSON.parse(await dj.async('string'));
     for(const r of meta.records){
-      const pf=zip.file(`pdfs/${r.id}.pdf`);
-      if(pf)r.pdfData='data:application/pdf;base64,'+await pf.async('base64');
+      if(Array.isArray(r.attachments)&&r.attachments.length){
+        for(let i=0;i<r.attachments.length;i++){
+          const a=r.attachments[i],pf=zip.file(`pdfs/${r.id}/${i}`);
+          if(pf)a.data=`data:${a.mime||'application/pdf'};base64,`+await pf.async('base64');
+        }
+      }else{
+        const pf=zip.file(`pdfs/${r.id}.pdf`); // 旧形式(1PDF)互換
+        if(pf)r.attachments=[{name:r.pdfName||'PDF',type:'pdf',mime:'application/pdf',data:'data:application/pdf;base64,'+await pf.async('base64')}];
+      }
     }
     return meta;
   }
