@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="過去問ノート"/>
+<meta name="theme-color" content="#EEF2F7"/>
+<title>過去問ノート</title>
+<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
+:root{
+  --bg:#EEF2F7;--card:#fff;--border:rgba(0,0,0,.07);
+  --ink1:#1C2333;--ink2:#5A6A84;--ink3:#A0AFBF;
+  --blue:#6EB5E8;--teal:#5AC8C8;--purple:#A08FE0;--red:#C84040;
+  --grad:linear-gradient(135deg,#7EC8C8 0%,#6EB5E8 55%,#A08FE0 100%);
+  --sh:0 2px 12px rgba(100,130,180,.10);
+  --r:16px;--rsm:10px;--tab-h:58px;
+  --top-safe:env(safe-area-inset-top,0px);--bot-safe:env(safe-area-inset-bottom,0px)
+}
+html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic UI',sans-serif;background:var(--bg);color:var(--ink1);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+#app{position:fixed;inset:0;display:flex;flex-direction:column}
+.screens{flex:1;overflow:hidden;position:relative}
+.screen{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;padding-top:calc(var(--top-safe) + 8px);padding-bottom:16px}
+.screen.active{display:block}
+#s-list{background:radial-gradient(ellipse 260px 200px at 92% 0%,rgba(126,200,200,.28) 0%,transparent 70%),radial-gradient(ellipse 200px 180px at -5% 45%,rgba(160,143,224,.20) 0%,transparent 65%),var(--bg)}
+.tabbar{
+  flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.94);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-top:.5px solid rgba(0,0,0,.08);
+  padding:8px 12px calc(8px + var(--bot-safe));
+  gap:6px;
+}
+.tab{
+  flex:1;display:flex;flex-direction:row;align-items:center;justify-content:center;
+  gap:5px;padding:9px 10px;
+  background:none;border:none;cursor:pointer;font-family:inherit;
+  color:var(--ink3);border-radius:24px;
+  transition:background .18s,color .18s;
+  min-height:42px;white-space:nowrap;
+}
+.tab svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.tab span{font-size:13px;font-weight:700;display:none}
+.tab.active{background:var(--ink1);color:#fff}
+.tab.active span{display:inline}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:8px 16px 12px}
+.nav-title{font-size:24px;font-weight:800;letter-spacing:-.3px}
+.nav-sub{font-size:12px;color:var(--ink2);margin-top:1px}
+.ph{display:flex;align-items:center;gap:8px;padding:8px 16px 12px;min-height:50px}
+.ph-title{font-size:20px;font-weight:800;flex:1}
+.hero{margin:0 16px 16px;border-radius:var(--r);background:var(--grad);padding:20px;position:relative;overflow:hidden;box-shadow:0 6px 24px rgba(110,181,232,.26)}
+.hero::before{content:'';position:absolute;right:-20px;top:-20px;width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.18)}
+.hero-lbl{font-size:11px;font-weight:700;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.hero-row{display:flex;align-items:center;gap:16px}
+.hero-sub{font-size:13px;color:rgba(255,255,255,.85);margin-top:4px;line-height:1.6}
+.chips{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.chip{background:rgba(255,255,255,.22);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;color:#fff}
+.ring{position:relative;width:60px;height:60px;flex-shrink:0}
+.ring svg{width:60px;height:60px}
+.ring-num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring-big{font-size:16px;font-weight:800;color:#fff;line-height:1}
+.ring-sm{font-size:9px;font-weight:600;color:rgba(255,255,255,.7)}
+.sec{margin:0 0 20px}
+.sec-lbl{font-size:11px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.09em;padding:0 20px 8px}
+.clist{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin:0 16px}
+.crow{display:flex;align-items:center;gap:12px;padding:13px 16px;min-height:52px;position:relative;background:var(--card)}
+.crow:active{background:#F2F5FA}
+.crow+.crow::before{content:'';position:absolute;top:0;left:60px;right:0;height:.5px;background:var(--border)}
+.ci{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.cb{flex:1;min-width:0}
+.ct{font-size:15px;font-weight:600;color:var(--ink1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cs{font-size:12px;color:var(--ink2);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cr{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.chev{width:7px;height:11px;opacity:.25}
+.chev path{fill:none;stroke:var(--ink1);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.mark-btn{border:none;border-radius:50%;width:30px;height:30px;font-size:15px;cursor:pointer;background:rgba(0,0,0,.06);display:inline-flex;align-items:center;justify-content:center;padding:0;font-family:inherit;transition:background .12s,transform .1s;flex-shrink:0}
+.mark-btn:active{transform:scale(.88)}
+.mark-o.active{background:rgba(78,203,160,.25)}
+.mark-x.active{background:rgba(224,92,92,.22)}
+.mark-t.active{background:rgba(245,168,74,.22)}
+.score-inp{width:56px;border:none;border-radius:8px;background:rgba(110,181,232,.12);font-family:inherit;font-size:13px;font-weight:700;color:var(--ink1);text-align:center;padding:6px 4px;outline:none;-webkit-appearance:none}
+.score-inp::placeholder{color:var(--ink3);font-weight:400}
+.chart-card{margin:0 16px 16px;background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:16px 16px 12px}
+.chart-title{font-size:12px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.chart-empty{font-size:13px;color:var(--ink3);text-align:center;padding:20px 0}
+.sbar{display:flex;align-items:center;gap:10px;padding:12px 16px}
+.sbar+.sbar{border-top:.5px solid var(--border)}
+.sb-lbl{font-size:14px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sb-track{width:88px;height:5px;background:rgba(0,0,0,.08);border-radius:3px;overflow:hidden;flex-shrink:0}
+.sb-fill{height:100%;border-radius:3px}
+.sb-val{font-size:12px;font-weight:700;color:var(--ink2);width:32px;text-align:right;flex-shrink:0}
+.srow{display:flex;align-items:center;padding:14px 16px;min-height:50px;position:relative}
+.srow+.srow::before{content:'';position:absolute;top:0;left:16px;right:0;height:.5px;background:var(--border)}
+.srow-lbl{font-size:15px;font-weight:500;flex:1}
+.srow-val{font-size:15px;font-weight:700}
+.pdf-wrap{margin:0 16px 16px;background:var(--card);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh)}
+.pdf-wrap iframe{width:100%;border:none;display:block;height:80vh;min-height:400px}
+@media(min-width:600px){
+  #app,.screens,.tabbar{max-width:100%}
+  #s-pdf .pdf-wrap{margin:0;border-radius:0}
+  #s-pdf .pdf-wrap iframe{height:calc(100vh - 120px)}
+  #s-pdf{padding-bottom:0}
+}
+#toast{position:fixed;bottom:calc(var(--tab-h) + var(--bot-safe) + 12px);left:50%;transform:translateX(-50%) translateY(8px);background:rgba(28,35,51,.92);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;white-space:nowrap;z-index:200}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.empty{text-align:center;padding:60px 24px;color:var(--ink2);font-size:14px}
+.empty-icon{font-size:48px;line-height:1;margin-bottom:14px}
+.empty-title{font-size:18px;font-weight:700;color:var(--ink1);margin-bottom:6px}
+.sp12{height:12px}.sp24{height:24px}
+.pdf-btn{border:none;border-radius:8px;background:rgba(110,181,232,.14);color:var(--blue);font-family:inherit;font-size:11px;font-weight:700;padding:6px 9px;cursor:pointer;min-height:32px;white-space:nowrap}
+.pdf-btn:active{opacity:.7}
+.modal-bg{position:fixed;inset:0;z-index:300;background:rgba(28,35,51,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:flex-end;justify-content:center}
+.modal-bg.hidden{display:none}
+.modal{width:100%;max-width:430px;background:var(--card);border-radius:24px 24px 0 0;padding:20px 0 calc(20px + var(--bot-safe));box-shadow:0 -4px 32px rgba(0,0,0,.15);max-height:90dvh;display:flex;flex-direction:column}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:0 20px 14px;flex-shrink:0}
+.modal-title{font-size:17px;font-weight:800}
+.modal-close-btn{border:none;background:rgba(0,0,0,.06);border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;color:var(--ink2)}
+.modal-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+@media(min-width:600px){
+  .modal-bg{align-items:center}
+  .modal{max-width:90vw;width:90vw;border-radius:16px;max-height:92vh;padding:20px 0 20px}
+  .modal-body{display:flex;overflow:hidden}
+  #pdf-modal-list{width:280px;flex-shrink:0;overflow-y:auto;border-right:.5px solid var(--border)}
+  #pdf-modal-viewer{flex:1;overflow-y:auto}
+  #pdf-modal-viewer .pdf-wrap{margin:0 16px 16px}
+  #pdf-modal-viewer .pdf-wrap iframe{height:calc(92vh - 100px)}
+}
+.icon-btn{width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;background:rgba(255,255,255,.85);box-shadow:var(--sh);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.icon-btn svg{width:18px;height:18px;fill:none;stroke:var(--ink2);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.back{background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:inherit;font-size:15px;font-weight:600;color:var(--blue);padding:8px 0;min-height:44px}
+.back svg{width:18px;height:18px;fill:none;stroke:var(--blue);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{display:block;width:calc(100% - 32px);margin:0 16px;padding:16px;border-radius:var(--rsm);border:none;background:var(--grad);color:#fff;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;text-align:center;box-shadow:0 4px 16px rgba(110,181,232,.32);-webkit-appearance:none;min-height:52px}
+.btn-p:active{opacity:.85}
+.btn-g{display:block;width:calc(100% - 32px);margin:0 16px;padding:15px;border-radius:var(--rsm);border:1.5px solid var(--border);background:var(--card);color:var(--ink2);font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;text-align:center;-webkit-appearance:none;min-height:52px}
+.btn-g:active{opacity:.65}
+.hint{margin:0 16px 16px;padding:14px 16px;background:rgba(110,181,232,.06);border:1px solid rgba(110,181,232,.16);border-radius:var(--rsm);font-size:13px;color:var(--ink2);line-height:1.7}
+.src-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}</style>
+</head>
+<body>
+<div id="app">
+  <div class="screens">
+
+    <div id="s-list" class="screen active">
+      <div class="nav">
+        <div><div class="nav-title">過去問ノート</div><div class="nav-sub" id="list-date"></div></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="f-subj" onchange="renderList()" style="border:none;background:rgba(255,255,255,.88);font-family:inherit;font-size:12px;font-weight:700;color:var(--blue);outline:none;padding:7px 12px;border-radius:20px;box-shadow:0 1px 5px rgba(0,0,0,.08);cursor:pointer;-webkit-appearance:none;min-height:36px"></select>
+          <button class="icon-btn" onclick="go('settings')" aria-label="設定"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+        </div>
+      </div>
+      <div id="list-hero"></div><div id="list-chart"></div><div id="list-area"></div>
+    </div>
+
+    <div id="s-stats" class="screen"><div class="ph"><div class="ph-title">統計</div></div><div id="stats-area"></div></div>
+
+    <div id="s-pdf" class="screen"><div class="ph"><div class="ph-title">PDF</div></div><div id="pdf-area"></div><div id="pdf-viewer"></div></div>
+
+    <div id="s-settings" class="screen">
+      <div class="ph"><button class="back" onclick="go('list')"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>戻る</button><div class="ph-title">設定</div></div>
+      <div class="sec"><div class="sec-lbl">データの状態</div><div class="clist"><div class="srow"><div class="srow-lbl"><span class="src-dot" id="src-dot"></span><span id="src-text">読み込み中…</span></div><div class="srow-val" id="src-count"></div></div></div></div>
+      <button class="btn-p" onclick="refreshRemote()">🔄 最新の過去問に更新</button>
+      <div class="sp12"></div>
+      <button class="btn-g" onclick="document.getElementById('import-file').click()">📥 ファイルから読み込む</button>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(this)"/>
+      <div class="sp24"></div>
+      <div class="hint">「最新の過去問に更新」は、Web公開されたデータを取りに行きます。<br>管理者から <b>data.json</b> を直接もらった場合は「ファイルから読み込む」で取り込めます。あなたが付けた◯×△や点数は消えません。</div>
+    </div>
+
+  </div>
+  <nav class="tabbar">
+    <button class="tab active" data-s="list" onclick="go('list')"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span>記録</span></button>
+    <button class="tab" data-s="stats" onclick="go('stats')"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span>統計</span></button>
+    <button class="tab" data-s="pdf" onclick="go('pdf')"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>PDF</span></button>
+  </nav>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<div class="modal-bg hidden" id="pdf-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="pdf-modal-title">PDF</div>
+      <button class="modal-close-btn" onclick="closePdfModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="pdf-modal-list"></div>
+      <div id="pdf-modal-viewer"></div>
+    </div>
+  </div>
+</div>
+<script>'use strict';
+/* ── 定数 ── */
+const SK_MASTER='kakomon-master',SK_SCORES='kakomon-scores',SK_MARKS='kakomon-marks';
+const PALETTE=['#6EB5E8','#4ECBA0','#F5A84A','#A08FE0','#E07878','#5AC8C8','#F08AAA','#7EB88A'];
+const PAL_BG={'#6EB5E8':'rgba(110,181,232,.12)','#4ECBA0':'rgba(78,203,160,.12)','#F5A84A':'rgba(245,168,74,.12)','#A08FE0':'rgba(160,143,224,.12)','#E07878':'rgba(224,120,120,.11)','#5AC8C8':'rgba(90,200,200,.12)','#F08AAA':'rgba(240,138,170,.11)','#7EB88A':'rgba(126,184,138,.12)'};
+const YEARS=Array.from({length:12},(_,i)=>2026-i);
+const SEED={subjects:[{name:'線形代数',color:'#6EB5E8'},{name:'英語',color:'#4ECBA0'},{name:'プログラミング',color:'#A08FE0'}],records:[{id:1,subject:'線形代数',year:2024,term:'前期',type:'期末',memo:'固有値・固有ベクトルが頻出',pdfName:null,pdfData:null},{id:2,subject:'線形代数',year:2023,term:'前期',type:'期末',memo:'',pdfName:null,pdfData:null},{id:3,subject:'英語',year:2024,term:'後期',type:'中間',memo:'',pdfName:null,pdfData:null},{id:4,subject:'プログラミング',year:2024,term:'前期',type:'期末',memo:'再帰・ソートが頻出',pdfName:null,pdfData:null}],nextId:5};
+
+/* ── 状態 ── */
+let M=structuredClone(SEED),SCORES={},MARKS={},activePdf=null,toastTimer=null,_blobUrl=null;
+/* データの出所: 'seed'=サンプル / 'local'=前回取込済 / 'remote'=Web公開データ / 'file'=手動読込 */
+let DATA_SRC='seed';
+
+/* ── IndexedDB ── */
+const IDB={name:'kakomon-pdf',ver:1,store:'pdfs'};
+let _db=null;
+function openIdb(){
+  return _db?Promise.resolve(_db):new Promise((res,rej)=>{
+    const r=indexedDB.open(IDB.name,IDB.ver);
+    r.onupgradeneeded=e=>e.target.result.createObjectStore(IDB.store,{keyPath:'id'});
+    r.onsuccess=e=>{_db=e.target.result;res(_db);};
+    r.onerror=()=>rej(r.error);
+  });
+}
+const idbRun=(mode,fn)=>openIdb().then(db=>new Promise((res,rej)=>{const tx=db.transaction(IDB.store,mode);fn(tx.objectStore(IDB.store),res,rej);tx.onerror=()=>rej(tx.error);}));
+const idbAll=()=>idbRun('readonly',(s,res,rej)=>{const r=s.getAll();r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});
+const idbPut=(id,n,d)=>idbRun('readwrite',(s,res)=>{s.put({id,pdfName:n,pdfData:d});s.transaction.oncomplete=res;});
+const idbClear=()=>idbRun('readwrite',(s,res)=>{s.clear();s.transaction.oncomplete=res;});
+
+/* ── ストレージ ── */
+function saveMaster(){
+  const slim={...M,records:M.records.map(r=>({...r,pdfData:null}))};
+  try{localStorage.setItem(SK_MASTER,JSON.stringify(slim));}catch(_){}
+}
+function saveScores(){try{localStorage.setItem(SK_SCORES,JSON.stringify(SCORES));}catch(_){}}
+function loadAll(){
+  try{
+    const raw=localStorage.getItem(SK_MASTER);
+    if(raw){
+      const p=JSON.parse(raw);
+      if(Array.isArray(p.subjects)&&Array.isArray(p.records)){
+        p.records.forEach(x=>{if(!x.type)x.type='期末';x.pdfData=null;});
+        p.nextId=Math.max(p.nextId??0,...p.records.map(x=>x.id+1));
+        M=p;DATA_SRC='local';
+      }
+    }
+  }catch(_){}
+  try{const raw=localStorage.getItem(SK_SCORES);if(raw)SCORES=JSON.parse(raw);}catch(_){}
+  try{const raw=localStorage.getItem(SK_MARKS);if(raw)MARKS=JSON.parse(raw);}catch(_){}
+}
+async function loadPdfs(){
+  try{(await idbAll()).forEach(e=>{const r=M.records.find(x=>x.id===e.id);if(r){r.pdfName=e.pdfName;r.pdfData=e.pdfData;}});}
+  catch(_){}
+}
+
+/* ── ユーティリティ ── */
+const el=id=>document.getElementById(id);
+const gv=id=>el(id).value;
+const sv=(id,v)=>{el(id).value=v??'';};
+function esc(x){return String(x??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);}
+const sColor=n=>M.subjects.find(s=>s.name===n)?.color??'#6EB5E8';
+const sBg=c=>PAL_BG[c]??'rgba(110,181,232,.12)';
+const tagStr=r=>`${parseInt(r.year)||'?'}年度 ${esc(r.term)} ${esc(r.type)}`;
+function todayStr(){const d=new Date(),w='日月火水木金土'[d.getDay()];return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${w}）`;}
+const getScore=id=>SCORES[id]??null;
+const getMark=id=>MARKS[id]??null;
+function saveMark(id,val){
+  if(!val||val==='null')delete MARKS[id];else MARKS[id]=val;
+  saveMarks();renderList();
+}
+function saveMarks(){try{localStorage.setItem(SK_MARKS,JSON.stringify(MARKS));}catch(_){}}
+function saveScore(id,val){
+  const n=val!==''?parseFloat(val):null;
+  if(n!=null&&(isNaN(n)||n<0)){toast('正しい点数を入力してください');return;}
+  n==null?delete SCORES[id]:SCORES[id]=n;
+  saveScores();renderScoreChart(gv('f-subj'));
+}
+function toast(msg){
+  const t=el('toast');if(toastTimer)clearTimeout(toastTimer);
+  t.textContent=msg;t.classList.add('show');
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2000);
+}
+function pdfBlobUrl(data){
+  if(_blobUrl){URL.revokeObjectURL(_blobUrl);_blobUrl=null;}
+  try{
+    const bin=atob(data.split(',')[1]),arr=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
+    return(_blobUrl=URL.createObjectURL(new Blob([arr],{type:'application/pdf'})));
+  }catch(_){return data;}
+}
+function fillSubjFilter(){
+  const prev=gv('f-subj');
+  el('f-subj').innerHTML='<option value="">すべての科目</option>'+M.subjects.map(s=>`<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('');
+  el('f-subj').value=prev;
+}
+
+/* ── ナビゲーション ── */
+async function go(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const scr=el('s-'+name);if(!scr)return;
+  scr.classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.s===name));
+  if(name==='pdf'||name==='list')await loadPdfs();
+  if(name==='pdf')renderPdf();
+  else if(name==='stats')renderStats();
+  else if(name==='list')renderList();
+  else if(name==='settings')renderSettings();
+  scr.scrollTo(0,0);
+}
+
+/* ── Hero ── */
+function heroHTML(){
+  const total=M.records.length,R=24,cx=30,cy=30,sw=5,circ=2*Math.PI*R;
+  const years=new Set(M.records.map(r=>r.year)).size;
+  const chips=M.subjects.map(s=>{const c=M.records.filter(r=>r.subject===s.name).length;return c?`<div class="chip">${esc(s.name)} ${c}問</div>`:''}).join('');
+  return `<div class="hero"><div class="hero-lbl">登録済み</div><div class="hero-row"><div class="ring"><svg viewBox="0 0 60 60"><circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="${sw}"/><circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="rgba(255,255,255,.88)" stroke-width="${sw}" stroke-dasharray="${circ}" stroke-dashoffset="0" stroke-linecap="round"/></svg><div class="ring-num"><div class="ring-big">${total}</div><div class="ring-sm">問</div></div></div><div><div class="hero-sub">科目 ${M.subjects.length}個<br>${years}年度分</div></div></div><div class="chips">${chips}</div></div>`;
+}
+
+/* ── renderList ── */
+function renderList(){
+  el('list-date').textContent=todayStr();
+  const fSubj=gv('f-subj');
+  if(fSubj){
+    el('list-hero').innerHTML='';
+    renderScoreChart(fSubj);
+  }else{
+    el('list-chart').innerHTML='';
+    el('list-hero').innerHTML=heroHTML();
+  }
+  const recs=M.records.filter(r=>!fSubj||r.subject===fSubj).sort((a,b)=>b.year-a.year||a.subject.localeCompare(b.subject));
+  if(!recs.length){el('list-area').innerHTML=`<div class="empty"><div class="empty-icon">📭</div><div class="empty-title">記録がありません</div></div>`;return;}
+  const order={};M.subjects.forEach((s,i)=>order[s.name]=i);
+  const grouped={};recs.forEach(r=>{(grouped[r.subject]??=[]).push(r);});
+  el('list-area').innerHTML=Object.keys(grouped).sort((a,b)=>(order[a]??99)-(order[b]??99)).map(subj=>{
+    const c=sColor(subj),bg=sBg(c);
+    return `<div class="sec"><div class="sec-lbl">${esc(subj)}</div><div class="clist">${grouped[subj].map(r=>rowHTML(r,c,bg)).join('')}</div></div>`;
+  }).join('');
+}
+
+/* ── Score chart ── */
+function renderScoreChart(subj){
+  const ce=el('list-chart');if(!subj){ce.innerHTML='';return;}
+  const color=sColor(subj);
+  const recs=M.records.filter(r=>r.subject===subj&&getScore(r.id)!=null).sort((a,b)=>a.year-b.year);
+  if(!recs.length){ce.innerHTML=`<div class="chart-card"><div class="chart-title">${esc(subj)}の得点推移</div><div class="chart-empty">点数が入力された記録がありません</div></div>`;return;}
+  const W=320,H=120,PL=32,PR=12,PT=10,PB=24,iW=W-PL-PR,iH=H-PT-PB;
+  const sc=recs.map(r=>getScore(r.id));
+  const minS=Math.max(0,Math.min(...sc)-10),maxS=Math.min(100,Math.max(...sc)+10),range=maxS-minS||1;
+  const pts=recs.map((r,i)=>({x:PL+(recs.length===1?iW/2:i/(recs.length-1)*iW),y:PT+iH-(getScore(r.id)-minS)/range*iH,r}));
+  const line=pts.map((p,i)=>`${i?'L':'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const area=`${line} L${pts.at(-1).x.toFixed(1)},${(PT+iH).toFixed(1)} L${pts[0].x.toFixed(1)},${(PT+iH).toFixed(1)} Z`;
+  const yLbls=[minS,Math.round((minS+maxS)/2),maxS].map(v=>{const y=PT+iH-(v-minS)/range*iH;return `<text x="${PL-5}" y="${(y+4).toFixed(1)}" font-size="9" fill="var(--ink3)" text-anchor="end">${v}</text>`;}).join('');
+  const dots=pts.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4.5" fill="${color}" stroke="#fff" stroke-width="2"/><text x="${p.x.toFixed(1)}" y="${(PT+iH+14).toFixed(1)}" font-size="9" fill="var(--ink3)" text-anchor="middle">${p.r.year}</text><text x="${p.x.toFixed(1)}" y="${(p.y-9).toFixed(1)}" font-size="9" font-weight="700" fill="${color}" text-anchor="middle">${getScore(p.r.id)}点</text>`).join('');
+  ce.innerHTML=`<div class="chart-card"><div class="chart-title">${esc(subj)}の得点推移</div><svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;overflow:visible"><defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity=".18"/><stop offset="100%" stop-color="${color}" stop-opacity=".01"/></linearGradient></defs><line x1="${PL}" y1="${PT}" x2="${PL}" y2="${PT+iH}" stroke="var(--border)" stroke-width="1"/><line x1="${PL}" y1="${PT+iH}" x2="${PL+iW}" y2="${PT+iH}" stroke="var(--border)" stroke-width="1"/><path d="${area}" fill="url(#cg)"/><path d="${line}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${yLbls}${dots}</svg></div>`;
+}
+
+/* ── Stats ── */
+function renderStats(){
+  if(!M.records.length){el('stats-area').innerHTML=`<div class="empty"><div class="empty-icon">📊</div><div class="empty-title">データがありません</div></div>`;return;}
+  const sCount=Object.fromEntries(M.subjects.map(s=>[s.name,M.records.filter(r=>r.subject===s.name).length]));
+  const maxS=Math.max(...Object.values(sCount),1);
+  // 科目別平均点計算
+  const subjAvg=Object.fromEntries(M.subjects.map(s=>{
+    const scored=M.records.filter(r=>r.subject===s.name&&getScore(r.id)!=null);
+    const avg=scored.length?Math.round(scored.reduce((a,r)=>a+getScore(r.id),0)/scored.length):null;
+    return [s.name,avg];
+  }));
+  const subjBars=M.subjects.filter(s=>sCount[s.name]>0).map(s=>`
+    <div class="sbar">
+      <div class="sb-lbl">${esc(s.name)}</div>
+      <div class="sb-track"><div class="sb-fill" style="width:${Math.round(sCount[s.name]/maxS*100)}%;background:${s.color}"></div></div>
+      <div class="sb-val">${sCount[s.name]}件</div>
+      <div style="font-size:12px;font-weight:700;color:${s.color};width:48px;text-align:right;flex-shrink:0">${subjAvg[s.name]!=null?subjAvg[s.name]+'点':'—'}</div>
+    </div>`).join('');
+  const ymap={},tmap={};
+  M.records.forEach(r=>{ymap[r.year]=(ymap[r.year]??0)+1;tmap[r.type]=(tmap[r.type]??0)+1;});
+  const maxY=Math.max(...Object.values(ymap),1),maxT=Math.max(...Object.values(tmap),1);
+  const sbar=(v,mx,col,lbl)=>`<div class="sbar"><div class="sb-lbl">${lbl}</div><div class="sb-track"><div class="sb-fill" style="width:${Math.round(v/mx*100)}%;background:${col}"></div></div><div class="sb-val">${v}件</div></div>`;
+  el('stats-area').innerHTML=`<div class="sec"><div class="sec-lbl">概要</div><div class="clist"><div class="srow"><div class="srow-lbl">登録済み</div><div class="srow-val">${M.records.length}問</div></div><div class="srow"><div class="srow-lbl">科目数</div><div class="srow-val">${M.subjects.length}科目</div></div><div class="srow"><div class="srow-lbl">年度数</div><div class="srow-val">${Object.keys(ymap).length}年度</div></div></div></div><div class="sec"><div class="sec-lbl">科目別 登録数</div><div class="clist">${subjBars||'<div style="padding:14px 16px;color:var(--ink2)">科目なし</div>'}</div></div><div class="sec"><div class="sec-lbl">年度別 登録数</div><div class="clist">${Object.entries(ymap).sort(([a],[b])=>b-a).map(([y,c])=>sbar(c,maxY,'var(--teal)',y+'年度')).join('')}</div></div><div class="sec"><div class="sec-lbl">種別 内訳</div><div class="clist">${Object.entries(tmap).sort(([,a],[,b])=>b-a).map(([t,c])=>sbar(c,maxT,'var(--purple)',esc(t))).join('')}</div></div><div class="sp24"></div>`;
+}
+
+/* ── PDF viewer ── */
+function renderPdf(){
+  const withPdf=M.records.filter(r=>r.pdfData);
+  if(!withPdf.length){el('pdf-area').innerHTML=`<div class="empty"><div class="empty-icon">📂</div><div class="empty-title">PDFがありません</div></div>`;el('pdf-viewer').innerHTML='';return;}
+  // 未選択状態をリセット（タブを開き直したときは選択解除）
+  if(!withPdf.find(r=>r.id===activePdf))activePdf=null;
+  const order={};M.subjects.forEach((s,i)=>order[s.name]=i);
+  const grouped={};withPdf.forEach(r=>{(grouped[r.subject]??=[]).push(r);});
+  Object.values(grouped).forEach(a=>a.sort((a,b)=>b.year-a.year));
+  el('pdf-area').innerHTML=Object.keys(grouped).sort((a,b)=>(order[a]??99)-(order[b]??99)).map(subj=>{
+    const c=sColor(subj),bg=sBg(c);
+    return `<div class="sec"><div class="sec-lbl">${esc(subj)}</div><div class="clist">${grouped[subj].map(r=>`<div class="crow" onclick="activePdf=${r.id};renderPdfViewer()" style="${r.id===activePdf?'background:rgba(110,181,232,.07)':''}"><div class="ci" style="background:${bg};color:${c}">📄</div><div class="cb"><div class="ct">${tagStr(r)}</div>${r.memo?`<div class="cs">${esc(r.memo)}</div>`:''}</div><svg class="chev" viewBox="0 0 8 13"><path d="M1 1l6 5.5L1 12"/></svg></div>`).join('')}</div></div>`;
+  }).join('');
+  renderPdfViewer();
+}
+function renderPdfViewer(){
+  const rec=M.records.find(r=>r.id===activePdf);
+  if(!rec?.pdfData){el('pdf-viewer').innerHTML='';return;}
+  el('pdf-viewer').innerHTML=`<div class="pdf-wrap"><iframe src="${pdfBlobUrl(rec.pdfData)}" title="${esc(rec.subject)}"></iframe></div>`;
+}
+
+/* ── User: rowHTML ── */
+function markBtns(id){
+  const m=getMark(id);
+  return `<div style="display:flex;gap:3px;flex-shrink:0">
+    <button class="mark-btn mark-o${m==='o'?' active':''}" onclick="saveMark(${id},'${m==='o'?'':'o'}')" title="◯">〇</button>
+    <button class="mark-btn mark-x${m==='x'?' active':''}" onclick="saveMark(${id},'${m==='x'?'':'x'}')" title="×">✕</button>
+    <button class="mark-btn mark-t${m==='t'?' active':''}" onclick="saveMark(${id},'${m==='t'?'':'t'}')" title="△">△</button>
+  </div>`;
+}
+function rowHTML(r,c,bg){
+  return `<div class="crow"><div class="ci" style="background:${bg};color:${c}">📄</div>${markBtns(r.id)}<div class="cb"><div class="ct">${tagStr(r)}</div>${r.memo?`<div class="cs">${esc(r.memo)}</div>`:''}</div><div class="cr">${r.pdfData?`<button class="pdf-btn" onclick="openPdfModal(${r.id},event)">📖 PDF</button>`:''}<input class="score-inp" type="number" min="0" max="999" placeholder="点数" value="${getScore(r.id)??''}" onchange="saveScore(${r.id},this.value)" onclick="event.stopPropagation()"/></div></div>`;
+}
+
+/* ── User: PDFモーダル ── */
+let _modalBlobUrl=null;
+function openPdfModal(id,e){
+  e?.stopPropagation();
+  const r=M.records.find(x=>x.id===id);if(!r?.pdfData)return;
+  const same=M.records.filter(x=>x.subject===r.subject&&x.pdfData).sort((a,b)=>b.year-a.year);
+  const c=sColor(r.subject),bg=sBg(c);
+  el('pdf-modal-title').textContent=r.subject;
+  el('pdf-modal-list').innerHTML=`<div style="padding:0 0 8px">${same.map(x=>`<div class="crow" onclick="showModalPdf(${x.id})" id="pmr-${x.id}" style="${x.id===id?'background:rgba(110,181,232,.07)':''}"><div class="ci" style="background:${bg};color:${c};font-size:15px">📄</div><div class="cb"><div class="ct">${tagStr(x)}</div>${x.memo?`<div class="cs">${esc(x.memo)}</div>`:''}</div><svg class="chev" viewBox="0 0 8 13"><path d="M1 1l6 5.5L1 12"/></svg></div>`).join('')}</div>`;
+  showModalPdf(id);
+  el('pdf-modal').classList.remove('hidden');
+}
+function showModalPdf(id){
+  el('pdf-modal-list').querySelectorAll('.crow').forEach(row=>{row.style.background=row.id===`pmr-${id}`?'rgba(110,181,232,.07)':'';});
+  const r=M.records.find(x=>x.id===id);
+  if(!r?.pdfData){el('pdf-modal-viewer').innerHTML='';return;}
+  if(_modalBlobUrl){URL.revokeObjectURL(_modalBlobUrl);_modalBlobUrl=null;}
+  const bin=atob(r.pdfData.split(',')[1]),arr=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
+  _modalBlobUrl=URL.createObjectURL(new Blob([arr],{type:'application/pdf'}));
+  el('pdf-modal-viewer').innerHTML=`<div style="padding:0 16px 16px"><div class="pdf-wrap" style="margin:0"><iframe src="${_modalBlobUrl}" title="${esc(r.subject)}"></iframe></div></div>`;
+}
+function closePdfModal(){
+  el('pdf-modal').classList.add('hidden');
+  if(_modalBlobUrl){URL.revokeObjectURL(_modalBlobUrl);_modalBlobUrl=null;}
+}
+
+/* ── User: データ取り込み ── */
+async function applyMaster(p,src){
+  if(!Array.isArray(p.subjects)||!Array.isArray(p.records))throw new Error('bad');
+  await idbClear();
+  for(const r of p.records){if(r.pdfData)await idbPut(r.id,r.pdfName||null,r.pdfData);}
+  p.records.forEach(x=>{if(!x.type)x.type='期末';});
+  p.nextId=Math.max(p.nextId??0,...p.records.map(x=>x.id+1),1);
+  M={...p,records:p.records.map(r=>({...r,pdfData:null}))};
+  DATA_SRC=src;saveMaster();fillSubjFilter();await loadPdfs();
+}
+async function loadRemote(){
+  try{
+    const res=await fetch('./data.json',{cache:'no-store'});
+    if(!res.ok)return false;
+    const p=await res.json();
+    if(!Array.isArray(p.subjects)||!Array.isArray(p.records))return false;
+    await applyMaster(p,'remote');return true;
+  }catch(_){return false;}
+}
+async function refreshRemote(){
+  toast('最新データを取得中…');
+  const ok=await loadRemote();
+  if(ok){renderList();renderSettings();toast('最新の過去問に更新しました');}
+  else{toast('Web公開データが見つかりませんでした');renderSettings();}
+}
+function importData(input){
+  const f=input.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=async ev=>{
+    try{
+      const p=JSON.parse(ev.target.result);
+      if(!Array.isArray(p.subjects)||!Array.isArray(p.records))throw 0;
+      if(!confirm(`過去問データを取り込みます。\n（科目 ${p.subjects.length}件・記録 ${p.records.length}件）\n※あなたが付けた◯×△・点数は消えません`)){input.value='';return;}
+      await applyMaster(p,'file');
+      renderList();renderSettings();toast('読み込みました');
+    }catch(_){toast('読み込みに失敗しました');}
+  };
+  rd.readAsText(f);input.value='';
+}
+function renderSettings(){
+  const map={seed:['#A0AFBF','サンプルデータ（未共有）'],local:['#5AC8C8','取込済みデータ'],remote:['#4ECBA0','Web公開データ（最新）'],file:['#6EB5E8','ファイルから読込済み']};
+  const[col,txt]=map[DATA_SRC]||map.seed;
+  el('src-dot').style.background=col;el('src-text').textContent=txt;
+  el('src-count').textContent=`${M.records.length}問 / ${M.subjects.length}科目`;
+}
+
+/* ── User: init ── */
+async function init(){
+  fillSubjFilter();await loadPdfs();renderList();
+  const ok=await loadRemote();
+  if(ok)renderList();
+}
+loadAll();init();
+</script>
+</body></html>
