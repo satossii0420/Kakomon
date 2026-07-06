@@ -225,7 +225,7 @@ const YEARS=Array.from({length:12},(_,i)=>2026-i);
 const SEED={subjects:[{name:'線形代数',color:'#6EB5E8'},{name:'英語',color:'#4ECBA0'},{name:'プログラミング',color:'#A08FE0'}],records:[{id:1,subject:'線形代数',year:2024,term:'前期',type:'期末',memo:'固有値・固有ベクトルが頻出',pdfName:null,pdfData:null},{id:2,subject:'線形代数',year:2023,term:'前期',type:'期末',memo:'',pdfName:null,pdfData:null},{id:3,subject:'英語',year:2024,term:'後期',type:'中間',memo:'',pdfName:null,pdfData:null},{id:4,subject:'プログラミング',year:2024,term:'前期',type:'期末',memo:'再帰・ソートが頻出',pdfName:null,pdfData:null}],nextId:5};
 
 /* ── 状態 ── */
-let M=structuredClone(SEED),SCORES={},MARKS={},activePdf=null,toastTimer=null,_blobUrl=null;
+let M=structuredClone(SEED),SCORES={},MARKS={},activePdf=null,toastTimer=null;
 /* データの出所: 'seed'=サンプル / 'local'=前回取込済 / 'remote'=Web公開データ / 'file'=手動読込 */
 let DATA_SRC='seed';
 
@@ -535,10 +535,15 @@ async function deriveKey(pw,salt){
   const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);
   return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:150000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
 }
+async function gunzipBytes(u8){
+  const ds=new DecompressionStream('gzip');const w=ds.writable.getWriter();w.write(u8);w.close();
+  return new Uint8Array(await new Response(ds.readable).arrayBuffer());
+}
 async function decryptJSON(env,pw){
   const key=await deriveKey(pw,b64ToU8(env.salt));
-  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64ToU8(env.iv)},key,b64ToU8(env.ct));
-  return JSON.parse(new TextDecoder().decode(pt));
+  const pt=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:b64ToU8(env.iv)},key,b64ToU8(env.ct)));
+  const bytes=env.gz?await gunzipBytes(pt):pt;
+  return JSON.parse(new TextDecoder().decode(bytes));
 }
 const SK_PW='kakomon-pw';
 async function loadRemote(){
