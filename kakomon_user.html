@@ -214,7 +214,10 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
       <button class="btn-g" onclick="resetPassword()">🔑 クラスパスワードを再入力</button>
       <input type="file" id="import-file" accept=".zip,.json" style="display:none" onchange="importData(this)"/>
       <div class="sp24"></div>
-      <div class="hint">初回は「最新の過去問に更新」でクラス共有パスワードの入力を求められます（1回だけ）。以降は自動で最新が表示されます。<br>パスワードが変わった時は「クラスパスワードを再入力」を押してください。管理者から <b>zip</b> を直接もらった場合は「ファイルから読み込む」でも取り込めます。</div>
+      <div class="sec"><div class="sec-lbl">Obsidian連携</div></div>
+      <button class="btn-g" onclick="exportToObsidian()">📤 Obsidianへ書き出す（.zip）</button>
+      <div class="sp24"></div>
+      <div class="hint">初回は「最新の過去問に更新」でクラス共有パスワードの入力を求められます（1回だけ）。以降は自動で最新が表示されます。<br>パスワードが変わった時は「クラスパスワードを再入力」を押してください。管理者から <b>zip</b> を直接もらった場合は「ファイルから読み込む」でも取り込めます。<br>「Obsidianへ書き出す」は記録を科目フォルダ別のMarkdownノート（メモ・点数・マーク付き）＋添付ファイルのzipにまとめます。解凍してVaultフォルダに配置してください。</div>
     </div>
 
   </div>
@@ -640,6 +643,43 @@ function importData(input){
     }catch(_){toast('読み込みに失敗しました');}
   })();
   input.value='';
+}
+/* ── User: Obsidianへエクスポート ── */
+function sanitizeFilename(s){return String(s??'').replace(/[\\/:*?"<>|]/g,'_').trim()||'untitled';}
+function markLabel(m){return m==='o'?'◯':m==='x'?'✕':m==='t'?'△':'';}
+async function exportToObsidian(){
+  toast('Obsidian用に書き出し中…');
+  try{
+    await loadJSZip();await loadPdfs();
+    const zip=new JSZip(),root=zip.folder('過去問ノート');
+    M.records.forEach(r=>{
+      const subjDir=root.folder(sanitizeFilename(r.subject));
+      const score=getScore(r.id),mark=getMark(r.id);
+      const atts=(r.attachments||[]).filter(a=>a.data);
+      const fmLines=['---',
+        `subject: "${r.subject}"`,
+        `year: ${parseInt(r.year)||0}`,
+        `term: "${r.term}"`,
+        `type: "${r.type}"`,
+        score!=null?`score: ${score}`:null,
+        mark?`mark: "${markLabel(mark)}"`:null,
+        `tags: [kakomon, "${r.subject}"]`,
+        '---'].filter(Boolean);
+      const embeds=atts.map(a=>`![[${sanitizeFilename(a.name)}]]`).join('\n');
+      const body=[r.memo||'',embeds].filter(Boolean).join('\n\n');
+      const fname=`${parseInt(r.year)||0}_${sanitizeFilename(r.term)}_${sanitizeFilename(r.type)}.md`;
+      subjDir.file(fname,fmLines.join('\n')+'\n\n'+body+'\n');
+      if(atts.length){
+        const attDir=subjDir.folder('attachments');
+        atts.forEach(a=>attDir.file(sanitizeFilename(a.name),a.data.split(',')[1],{base64:true}));
+      }
+    });
+    const blob=await zip.generateAsync({type:'blob'}),url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download='kakomon-obsidian.zip';document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),3000);
+    toast('書き出しが完了しました');
+  }catch(_){toast('書き出しに失敗しました');}
 }
 function renderSettings(){
   const map={seed:['#A0AFBF','サンプルデータ（未共有）'],local:['#5AC8C8','取込済みデータ'],remote:['#4ECBA0','Web公開データ（最新）'],file:['#6EB5E8','ファイルから読込済み']};
